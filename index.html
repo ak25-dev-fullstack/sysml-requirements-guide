@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SysML Requirements Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap">
+<style>
+/* VOICE: a patient tutor at the modelling lab bench: exact, plain, never does the work for you.
+   IDEA: a SysML model's drawing set: framed diagrams, header tags, dashed dependencies, crosshair containment.
+   PICTURE: the coursework chain drawn as six diagram frames; later, real requirement diagrams built step by step.
+   COLOUR and TYPE: black on white with one mint field (#b8f5d0); night is black with mint ink. Space Grotesk 700 titles, Inter text and diagram lettering.
+   LAYOUT: mint title band, chain picture under it, then one band per decision; figures framed, text beside or below, stacking under 600px. */
+:root{color-scheme:light dark;
+--bg:light-dark(#ffffff,#0b0c0b);--ink:light-dark(#0b0c0b,#ecf1ed);--mut:light-dark(#545955,#a3aca6);
+--line:light-dark(#d5d9d6,#2b302d);--soft:light-dark(#f3f5f4,#131614);
+--field:light-dark(#b8f5d0,#0b0c0b);--fink:light-dark(#0b0c0b,#b8f5d0);
+--hi:light-dark(#b8f5d0,#1c3a29);--warn:light-dark(#8a3b00,#ffb37a);--ok:light-dark(#0e6a38,#8fe8b5);--info:light-dark(#2d4a8a,#a9c2ff)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,-apple-system,"Segoe UI",sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:"Space Grotesk",Inter,system-ui,sans-serif;font-weight:700;line-height:1.08;text-wrap:balance;margin:0}
+h1{font-size:clamp(34px,5.2vw,52px);max-width:18ch}
+h2{font-size:clamp(28px,3.4vw,36px);margin-bottom:12px}
+h3{font-size:20px;line-height:1.2;margin-bottom:6px}
+p{margin:0 0 12px;max-width:70ch}
+a{color:inherit;text-underline-offset:3px}
+code,.id{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.wrap{max-width:1240px;margin:0 auto}
+.band{padding:clamp(32px,4.5vw,64px) max(5vw,16px);border-top:1px solid var(--line)}
+.lead{font-size:18px;max-width:62ch}
+.mut{color:var(--mut)}
+.small{font-size:14px}
+.hero{background:var(--field);color:var(--fink);padding:clamp(32px,5vw,64px) max(5vw,16px) 28px}
+.hero .lead{margin-top:16px}
+.hero .note{font-size:14px;margin-top:6px}
+nav.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+nav.top .wrap{display:flex;gap:4px;overflow-x:auto;padding:8px max(5vw,16px);scrollbar-width:thin}
+nav.top a{flex:none;display:inline-flex;align-items:center;white-space:nowrap;text-decoration:none;font-size:14px;font-weight:500;padding:9px 12px;border-radius:999px;min-height:40px}
+nav.top a:hover{background:var(--soft)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px;border-radius:4px}
+.scroll{overflow-x:auto}
+.hint{display:none;font-size:13px;color:var(--mut);margin:6px 0 0}
+@media(max-width:900px){.hint{display:block}}
+/* chain */
+.chain{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:22px;margin-top:20px}
+.node{position:relative;text-align:left;background:var(--bg);color:var(--ink);border:1.5px solid var(--ink);padding:0 0 12px;font:inherit;cursor:pointer;min-height:190px;display:flex;flex-direction:column}
+.node:not(:last-child)::after{content:"";position:absolute;right:-17px;top:50%;width:10px;height:10px;border-top:2px solid var(--mut);border-right:2px solid var(--mut);transform:translateY(-50%) rotate(45deg)}
+.node[aria-pressed=true]{background:var(--hi)}
+.tag{align-self:flex-start;position:relative;font-size:12.5px;padding:3px 20px 3px 8px;border-right:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);clip-path:polygon(0 0,100% 0,100% calc(100% - 9px),calc(100% - 9px) 100%,0 100%)}
+.tag::after{content:"";position:absolute;right:0;bottom:0;width:10px;height:10px;background:linear-gradient(to top left,transparent 42%,var(--ink) 42%,var(--ink) 58%,transparent 58%)}
+.tag b{font-weight:700}
+.node svg{width:100%;height:78px;margin:12px 0 6px;color:var(--ink)}
+.node .nt{font-weight:600;font-size:15px;line-height:1.3;padding:0 12px}
+.node .nl{font-size:13px;color:var(--mut);padding:4px 12px 0}
+.panel{margin-top:22px;border:1.5px solid var(--ink);display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.panel div{padding:16px;border-right:1px solid var(--line)}
+.panel div:last-child{border-right:0}
+.panel h4{margin:0 0 6px;font-size:14px;font-weight:600;color:var(--mut)}
+.panel p{margin:0;font-size:15px}
+.flipnote{margin-top:14px;font-size:14px;color:var(--mut)}
+@media(max-width:1000px){.chain{grid-template-columns:repeat(3,minmax(0,1fr))}.node:nth-child(3)::after{display:none}.panel{grid-template-columns:repeat(2,minmax(0,1fr))}.panel div:nth-child(2){border-right:0}.panel div:nth-child(-n+2){border-bottom:1px solid var(--line)}}
+@media(max-width:600px){.chain{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}.node::after{display:none}.node{min-height:160px}.panel{grid-template-columns:minmax(0,1fr)}.panel div{border-right:0;border-bottom:1px solid var(--line)}}
+/* figures */
+.fig{border:1.5px solid var(--ink);background:var(--bg);padding:10px}
+.fig svg{display:block;width:100%;height:auto}
+.wide svg{min-width:900px}
+.two{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:18px}
+@media(max-width:860px){.two{grid-template-columns:minmax(0,1fr)}}
+.bx{fill:var(--bg);stroke:var(--ink);stroke-width:1.4}
+.new .bx,.new .nb{fill:var(--hi)}
+.kw{font:400 12.5px Inter,sans-serif;fill:var(--ink)}
+.nm{font:600 14px Inter,sans-serif;fill:var(--ink)}
+.pr{font:400 13px Inter,sans-serif;fill:var(--ink)}
+.hd{font:400 13px Inter,sans-serif;fill:var(--ink)}
+.ln,.frm{stroke:var(--ink);stroke-width:1.2;fill:none}
+.frm{stroke-width:1.5}
+.dl{fill:none;stroke:var(--ink);stroke-width:1.4;stroke-dasharray:7 4}
+.sl,.ah{fill:none;stroke:var(--ink);stroke-width:1.4}
+.xh{fill:var(--bg);stroke:var(--ink);stroke-width:1.4}
+.an{fill:none;stroke:var(--ink);stroke-width:1.1;stroke-dasharray:2 3}
+.lb{fill:var(--bg)}
+.new .lb{fill:var(--hi)}
+.new .dl,.new .sl,.new .ah,.new .an{stroke-width:2.4}
+.kwl{font:500 12.5px Inter,sans-serif;fill:var(--ink)}
+.mk circle{fill:var(--ink)}.mk text{font:700 12px Inter,sans-serif;fill:var(--bg)}
+.nb{fill:var(--bg);stroke:var(--ink);stroke-width:1.4}
+/* lists and tables */
+ol.callouts{padding-left:0;list-style:none;margin:0;display:grid;gap:12px}
+ol.callouts li{display:grid;grid-template-columns:28px minmax(0,1fr);gap:10px}
+ol.callouts .n{width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--bg);font-weight:700;font-size:13px;display:grid;place-items:center}
+.hdr{font-size:17px;border:1.5px solid var(--ink);padding:10px 12px;display:flex;flex-wrap:wrap;gap:6px 10px;margin:8px 0 12px}
+.hdr span{border-bottom:3px solid var(--hi);padding-bottom:1px}
+dl.defs{margin:0;display:grid;grid-template-columns:minmax(130px,auto) minmax(0,1fr);gap:8px 16px}
+dl.defs dt{font-weight:600}dl.defs dd{margin:0}
+@media(max-width:600px){dl.defs{grid-template-columns:minmax(0,1fr)}dl.defs dd{margin-bottom:8px}}
+table{border-collapse:collapse;width:100%;font-size:15px;margin-top:14px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--line)}
+thead th{font-size:14px;color:var(--mut);font-weight:600;border-bottom:1.5px solid var(--ink)}
+tbody th{font-weight:600}
+@media(max-width:600px){table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td,.stack th{display:grid;grid-template-columns:110px minmax(0,1fr);gap:10px;border:0;padding:4px 0}.stack td::before,.stack th::before{content:attr(data-l);font-weight:600;color:var(--mut);font-size:13px}}
+.rule{background:var(--hi);color:var(--ink);padding:16px 18px;margin:18px 0;font-size:17px;max-width:none}
+.rule b{font-weight:700}
+/* tabs */
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.tabs button,.btn{font:inherit;font-size:15px;font-weight:500;min-height:44px;padding:8px 14px;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer;border-radius:0}
+.tabs button[aria-selected=true],.btn.primary{background:var(--ink);color:var(--bg)}
+.btn:disabled{opacity:.35;cursor:default}
+.use{display:inline-block;font-size:13px;font-weight:600;padding:2px 8px;border:1px solid var(--ink);margin-left:6px;vertical-align:2px}
+.mist{margin:0;padding-left:18px}.mist li{margin-bottom:4px}
+/* cards */
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px;margin-top:16px}
+.card{border:1.5px solid var(--ink);padding:16px}
+.card p:last-child{margin-bottom:0}
+.card .pro{font-size:14.5px}
+/* wizard */
+.wiz{border:1.5px solid var(--ink);padding:18px;margin-top:14px}
+.wiz .q{font-size:18px;font-weight:600;margin-bottom:12px;max-width:62ch}
+.wiz .row{display:flex;flex-wrap:wrap;gap:8px}
+.wiz .ans{font-size:18px;margin:0 0 8px}
+.wiz .trail{font-size:13px;color:var(--mut);margin-top:12px}
+/* ladder */
+.ladder{display:grid;gap:8px;margin-top:16px;max-width:760px}
+.rung{border:1.5px solid var(--ink);padding:10px 14px;display:grid;gap:2px}
+.rung span{font-size:14px;color:var(--mut)}
+.rung.s{border-style:dashed}
+.divide{padding:8px 0;border-top:3px dashed var(--ink);border-bottom:3px dashed var(--ink);font-weight:600;text-align:center;font-size:15px}
+.ex{display:grid;gap:10px;margin-top:16px}
+.exr{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;border-bottom:1px solid var(--line);padding-bottom:10px}
+.exr b{font-size:14px}.exr .q{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px}
+@media(max-width:600px){.exr{grid-template-columns:minmax(0,1fr);gap:2px}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.chips span{font-size:13.5px;border:1px solid var(--line);padding:3px 9px}
+/* checker */
+.chk{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;border:1.5px solid var(--ink);padding:18px;margin-top:16px}
+@media(max-width:760px){.chk{grid-template-columns:minmax(0,1fr)}}
+label.f{display:grid;gap:4px;font-size:14px;font-weight:600;margin-bottom:12px}
+input[type=text],textarea{font:inherit;font-size:16px;font-weight:400;padding:10px 12px;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink);border-radius:0;width:100%}
+textarea{min-height:110px;resize:vertical}
+.flags{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.flags li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;font-size:15px}
+.flags .d{width:12px;height:12px;border-radius:50%;margin-top:6px}
+.flags .warn .d{background:var(--warn)}.flags .ok .d{background:var(--ok)}.flags .info .d{background:var(--info)}
+.pat{font-weight:600;margin-bottom:10px}
+/* stepper */
+.stepper{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;margin-top:18px}
+.stp{border:1.5px solid var(--ink);padding:18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 32px;align-items:end;min-height:190px}
+@media(max-width:760px){.stp{grid-template-columns:minmax(0,1fr)}}
+.stp .k{font-size:14px;color:var(--mut);font-weight:600}
+.stp h3{margin:4px 0 10px}
+.stp p{margin:0}
+.nav2{display:grid;gap:12px;justify-items:start}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dots button{width:34px;height:34px;min-height:34px;border:1.5px solid var(--ink);background:var(--bg);color:var(--ink);font:600 13px Inter,sans-serif;cursor:pointer;padding:0}
+.dots button[aria-current=true]{background:var(--ink);color:var(--bg)}
+.ctl{display:flex;gap:8px}
+/* build path & checks */
+.steps{list-style:none;padding:0;margin:16px 0 0;display:grid;gap:12px}
+.steps li{border:1.5px solid var(--ink);padding:14px 16px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px}
+.steps li.done{background:var(--soft)}
+.steps li.done h3{text-decoration:line-through;text-decoration-thickness:1.5px}
+input[type=checkbox]{width:22px;height:22px;accent-color:var(--ink);margin:2px 0 0;cursor:pointer}
+.steps p{font-size:15.5px}
+.steps ul{margin:0 0 10px;padding-left:18px;font-size:15.5px}
+.steps ul li{border:0;padding:0;display:list-item;margin-bottom:4px}
+.flag{border-left:4px solid var(--ink);padding:10px 14px;background:var(--soft);margin:12px 0;font-size:15.5px}
+.cgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:16px;margin-top:16px}
+.cgroup{border:1.5px solid var(--ink);padding:16px}
+.cgroup label{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;font-size:15px;margin:8px 0;cursor:pointer}
+.score{font-weight:600;margin-top:12px}
+/* quiz */
+.quiz{display:grid;gap:16px;margin-top:16px}
+.qq{border:1.5px solid var(--ink);padding:16px}
+.qq .qt{font-weight:600;margin-bottom:10px}
+.qq .opts{display:grid;gap:8px}
+.qq button{text-align:left;font:inherit;font-size:15px;min-height:44px;padding:10px 12px;border:1px solid var(--ink);background:var(--bg);color:var(--ink);cursor:pointer;border-radius:0}
+.qq button.right{background:var(--hi);border-width:2px}
+.qq button.wrong{text-decoration:line-through;opacity:.6}
+.qq .fb{margin:10px 0 0;font-size:15px}
+.src{columns:2 340px;column-gap:32px;padding-left:18px;font-size:15px}
+.src li{break-inside:avoid;margin-bottom:8px}
+footer{padding:28px max(5vw,16px) 48px;border-top:1px solid var(--line);font-size:14px;color:var(--mut)}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <h1>Build your requirements diagrams one decision at a time</h1>
+    <p class="lead">A method guide for Part 1.2 of the patient monitoring coursework. It covers the notation, the seven relationships, the difference between high-level and low-level requirements, and how the choices you make now carry into your BDDs and the 2.5 conformance mapping. It teaches how. Your requirements, names and links stay yours to write.</p>
+    <p class="note">Every complete diagram here uses a fictional greenhouse climate controller, so nothing on this page is coursework content. Notation follows SysML 1.6 and 1.7 and is tool-neutral.</p>
+  </div>
+</header>
+<nav class="top" aria-label="Sections"><div class="wrap">
+  <a href="#chain">The chain</a><a href="#anatomy">Anatomy</a><a href="#relationships">Relationships</a><a href="#choose">Choosing a link</a><a href="#levels">High vs low</a><a href="#wording">Naming and wording</a><a href="#example">Worked example</a><a href="#build">Your build path</a><a href="#sheet">Spreadsheet</a><a href="#check">Self-check</a><a href="#quiz">Quiz</a><a href="#lab">Ask in lab</a><a href="#sources">Sources</a>
+</div></nav>
+
+<main>
+<section class="band" id="chain" style="border-top:0">
+  <div class="wrap">
+    <h2>One requirement ID travels through five diagrams and the 2.5 mapping</h2>
+    <p>Each step depends on the one before it. Select a step to see what it holds, how it links on, and when it is finished.</p>
+    <div class="chain" id="chainRow"></div>
+    <div class="panel" id="chainPanel" aria-live="polite"></div>
+    <p class="flipnote">The chevrons show the order you work in. SysML dependency arrows point the other way: from the newer element back to the one it depends on. A low-level requirement points at its high-level parent, and a block points at the requirement it satisfies.</p>
+  </div>
+</section>
+
+<section class="band" id="anatomy">
+  <div class="wrap">
+    <h2>What a requirement box and a diagram frame must show</h2>
+    <p>Correct SysML notation is one of the five things Part 1.2 is marked on. These are the parts a marker will look for.</p>
+    <div class="two">
+      <div class="fig"><svg id="anatSvg" viewBox="0 0 600 300" role="img" aria-label="A requirement element inside a diagram frame, with four numbered parts"></svg></div>
+      <div>
+        <ol class="callouts">
+          <li><span class="n">1</span><div><b>«requirement»</b> keyword. It tells the reader this box is a requirement element. In SysML 1.x a requirement is a stereotyped class.</div></li>
+          <li><span class="n">2</span><div><b>Name.</b> A short label for the capability, shown in bold. It is a noun phrase, not a sentence.</div></li>
+          <li><span class="n">3</span><div><b>id</b> property. Your identifier: unique, never reused, and the same in your spreadsheet, every diagram and your report text.</div></li>
+          <li><span class="n">4</span><div><b>text</b> property. The requirement statement itself, with one “shall”.</div></li>
+        </ol>
+      </div>
+    </div>
+    <h3 style="margin-top:28px">The frame header</h3>
+    <p>SysML requires every diagram to sit in a frame. Its header tag reads <code>diagramKind [modelElementType] modelElementName [diagramName]</code>:</p>
+    <div class="hdr"><b>req</b><span>[Package]</span><span>GCC Requirements</span><span>[High-Level Requirements]</span></div>
+    <dl class="defs">
+      <dt>req</dt><dd>The diagram kind. Requirement diagrams are <code>req</code>, block definition diagrams <code>bdd</code>, sequence diagrams <code>sd</code>.</dd>
+      <dt>[Package]</dt><dd>The type of model element that owns the diagram, usually the package your requirements live in.</dd>
+      <dt>GCC Requirements</dt><dd>That element’s name.</dd>
+      <dt>[High-Level Requirements]</dt><dd>The diagram’s own name, which you choose. It is how the reader tells your two requirement diagrams apart.</dd>
+    </dl>
+    <div class="cards">
+      <div class="card"><h3>One element, many views</h3><p>A requirement exists once in the model. Each diagram is a view of it. To show a high-level requirement on the low-level diagram, drag the existing element in from the model browser. Never draw a new box with the same name: a duplicate breaks every traceability table built from the model.</p></div>
+      <div class="card"><h3>Properties, not typed labels</h3><p>Tools display id and text differently. Some show <code>Id = "…"</code> in a compartment, some put the text in the box body. What matters is that id and text are set as the element’s properties, not typed into the name field.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="relationships">
+  <div class="wrap">
+    <h2>Seven relationships, and which end the arrowhead goes on</h2>
+    <p class="rule"><b>The direction rule.</b> Every dependency (deriveReqt, refine, satisfy, verify, trace, copy) is a dashed line with an open arrowhead. It starts at the element that depends and ends on the requirement it depends on. Containment is different: a solid line with a crosshair at the parent.</p>
+    <div class="tabs" role="tablist" id="relTabs"></div>
+    <div class="two" style="margin-top:0">
+      <div><div class="fig"><svg id="relSvg" viewBox="0 0 560 230" role="img" aria-label="Notation for the selected relationship"></svg></div><p class="small mut" style="margin-top:8px">Text compartments are left out of these small diagrams to save space.</p></div>
+      <div id="relInfo" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="choose">
+  <div class="wrap">
+    <h2>Choosing the link: answer one question at a time</h2>
+    <p>Use this whenever you are about to draw a line and are not sure which kind it is.</p>
+    <div class="wiz" id="wiz" aria-live="polite"></div>
+    <div class="cards">
+      <div class="card"><h3>“Refine” in the brief is plain English</h3><p>The brief asks you to “refine the model” with low-level requirements. That means make it more detailed. It is not an instruction to use the <code>«refine»</code> keyword. In SysML terms, a new and more specific requirement that you worked out from a high-level one and an Article provision is usually a <code>«deriveReqt»</code>. The specification’s own example is lower-level requirements derived from a system requirement.</p><p>Whichever relationship you choose, state the convention once (in a comment on the diagram or a line in your report) and apply it to every link.</p></div>
+      <div class="card"><h3>Containment or derive?</h3><p>Containment says the children together are the parent, split into single pieces. Derive says the new requirement adds detail the parent never stated. Your low-level requirements cover only part of each high-level requirement, and they add conformance detail from the Act, so derive usually fits better. Containment would claim your 4–6 requirements fully cover their parents.</p></div>
+    </div>
+    <h3 style="margin-top:28px">Three ways to show which Article provision a low-level requirement came from</h3>
+    <div class="cards">
+      <div class="card"><h3>A. «rationale» comment</h3><p>Anchor a «rationale» comment to each «deriveReqt» line, citing the paragraph (for example a provision of Article 14(4)). SysML lets a rationale attach to relationships as well as elements.</p><p class="pro"><b>For:</b> keeps your requirement count clean at 4–6. <b>Against:</b> the provision is text, not a model element, so a traceability table will not list it.</p></div>
+      <div class="card"><h3>B. Provisions as source elements</h3><p>Put each cited provision in its own package as a source requirement, and draw «deriveReqt» from your low-level requirement to it as well as to the high-level parent.</p><p class="pro"><b>For:</b> the first link of the 2.5 chain becomes a real model link. <b>Against:</b> adds boxes. Label them clearly as sources (separate package, own ID prefix) so they are not counted as your 4–6.</p></div>
+      <div class="card"><h3>C. In the ID or text only</h3><p>Encode the article in the ID or mention it inside the requirement text.</p><p class="pro"><b>For:</b> quick. <b>Against:</b> weakest: nothing in the model connects the requirement to its source. Use it alongside A or B, not instead of them.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="levels">
+  <div class="wrap">
+    <h2>High-level says what the system must achieve; low-level says what it must do so a provision can be met</h2>
+    <p>Both levels describe the problem. Neither chooses technology. The marking criteria call this “separation between the problem and implementation decisions”.</p>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th></th><th>High-level diagram</th><th>Low-level diagram</th></tr></thead>
+      <tbody>
+        <tr><th data-l="">Comes from</th><td data-l="High-level">The case study: its principal system needs</td><td data-l="Low-level">The Article 14 and Article 10 provisions you selected and justified in 1.1</td></tr>
+        <tr><th data-l="">What the brief asks</th><td data-l="High-level">Principal requirements at an appropriate abstraction, no unnecessary technology</td><td data-l="Low-level">4–6 requirements, at least one per article, traceable to the high-level model</td></tr>
+        <tr><th data-l="">Question it answers</th><td data-l="High-level">What must the system achieve?</td><td data-l="Low-level">What exactly must it do, show, prevent or allow so this provision can be met?</td></tr>
+        <tr><th data-l="">Usual relationships</th><td data-l="High-level">Containment from one composite requirement</td><td data-l="Low-level">«deriveReqt» to high-level parents, plus your source convention</td></tr>
+        <tr><th data-l="">Technology named?</th><td data-l="High-level">No</td><td data-l="Low-level">No. More specific and testable, but mechanisms belong in Part 2.2</td></tr>
+        <tr><th data-l="">Feeds</th><td data-l="High-level">The low-level diagram and the high-level BDD’s scope</td><td data-l="Low-level">«satisfy» links from low-level BDD blocks, sequence messages, 2.5 rows</td></tr>
+      </tbody>
+    </table></div>
+    <div class="two">
+      <div>
+        <h3>The abstraction ladder</h3>
+        <div class="ladder">
+          <div class="rung"><b>Case study and your 1.1 extension</b><span>Needs, in prose. No diagrams.</span></div>
+          <div class="rung"><b>High-level system requirements</b><span>What it must achieve. Containment.</span></div>
+          <div class="rung"><b>Low-level conformance requirements</b><span>What it must do for a provision. «deriveReqt» to high-level.</span></div>
+          <div class="divide">Problem above, solution below. No requirement text crosses this line.</div>
+          <div class="rung s"><b>Design mechanisms (blocks, Part 2.2)</b><span>How, using researched technology. «satisfy» to low-level.</span></div>
+          <div class="rung s"><b>Behaviour (sequence, Part 2.3)</b><span>The mechanism at run time. Cited as evidence in 2.5.</span></div>
+        </div>
+      </div>
+      <div>
+        <h3>Too high, about right, too low</h3>
+        <p class="small mut">Greenhouse example, about water.</p>
+        <div class="ex">
+          <div class="exr"><b>Too vague</b><div><div class="q">The GCC shall manage water sensibly.</div><span class="small mut">Nothing to test: “sensibly” has no observable meaning.</span></div></div>
+          <div class="exr"><b>High-level</b><div><div class="q">The GCC shall adjust the climate of any zone that is outside its set ranges.</div><span class="small mut">A principal need, open to any technology.</span></div></div>
+          <div class="exr"><b>Low-level</b><div><div class="q">The GCC shall limit the water delivered to each zone to that zone’s daily water allowance.</div><span class="small mut">Narrower and testable, still no mechanism.</span></div></div>
+          <div class="exr"><b>Too low</b><div><div class="q">The GCC shall close a solenoid valve over MQTT when the flow meter passes 40 litres.</div><span class="small mut">A design decision. The valve and the protocol belong in a BDD block.</span></div></div>
+        </div>
+        <p class="small" style="margin-top:12px"><b>Quick test:</b> if a different technology could still meet the statement, it is a requirement. If only one design could, it is a design decision.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="wording">
+  <div class="wrap">
+    <h2>Name it short, write it once, number it so it never moves</h2>
+    <h3 style="margin-top:8px">ID schemes</h3>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Scheme</th><th>Looks like</th><th>For</th><th>Against</th></tr></thead>
+      <tbody>
+        <tr><th data-l="Scheme">Flat by level</th><td data-l="Looks like"><span class="id">HLR-01, LLR-01</span></td><td data-l="For">Simple; the level is visible at a glance</td><td data-l="Against">Says nothing about the source article</td></tr>
+        <tr><th data-l="Scheme">Hierarchical</th><td data-l="Looks like"><span class="id">R1, R1.1, R1.2</span></td><td data-l="For">Mirrors containment</td><td data-l="Against">Breaks when you restructure; awkward for derived requirements, which are not contained</td></tr>
+        <tr><th data-l="Scheme">Source-coded</th><td data-l="Looks like"><span class="id">LLR-14-01, LLR-10-01</span></td><td data-l="For">The article is readable straight from your 2.5 table</td><td data-l="Against">Longer; you must keep the codes consistent</td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin-top:12px">Whichever you pick: IDs are unique, never reused, and never renumbered once your report cites them. The worked example below uses a source-coded variant (W for its water clause, M for misting).</p>
+    <div class="cards">
+      <div class="card"><h3>Name</h3><ul class="mist"><li>A noun phrase of two to five words in Title Case, naming the capability</li><li>No “shall”: the name is a label, the text is the requirement</li><li>Distinct from its siblings, so the diagram reads on its own</li></ul></div>
+      <div class="card"><h3>Text</h3><ul class="mist"><li>One “shall” per requirement. Two means two requirements.</li><li>Active voice, with your system as the subject</li><li>Use the same system name in every requirement, your BDD system block and your sequence lifeline; 2.5 marks consistency across models</li><li>Verifiable: someone could check it was met</li><li>No technology, products, algorithms or screen widgets</li></ul></div>
+      <div class="card"><h3>Verifiable without clinical numbers</h3><p>The case study says you are not assessed on clinical thresholds. You can keep a requirement testable by referring to a value the deploying organisation sets, instead of inventing a number.</p></div>
+    </div>
+    <h3 style="margin-top:28px">EARS sentence patterns</h3>
+    <p>The Easy Approach to Requirements Syntax (Mavin et al., Rolls-Royce, 2009) gives five patterns. Matching the pattern to the situation makes a requirement read clearly and test cleanly.</p>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Pattern</th><th>Template</th><th>Greenhouse example</th></tr></thead>
+      <tbody id="earsBody"></tbody>
+    </table></div>
+    <div class="two">
+      <div><h3>Vague words to replace</h3><p class="small">Each one hides what would make the requirement true.</p><div class="chips" id="vagueChips"></div></div>
+      <div><h3>Implementation words to move to Part 2.2</h3><p class="small">These name a design choice. They belong in a block, not in requirement text.</p><div class="chips" id="techChips"></div></div>
+    </div>
+    <h3 style="margin-top:20px">Check your own wording</h3>
+    <p>Type one of your requirements. The checks run in this page only. Nothing is saved or sent, and the checker never rewrites your text. Its checks are rules of thumb, not a grade.</p>
+    <div class="chk">
+      <div>
+        <label class="f">Your system name, as you write it in every requirement<input type="text" id="cSys" placeholder="e.g. the name you use in your BDD" autocomplete="off"></label>
+        <label class="f">ID<input type="text" id="cId" autocomplete="off"></label>
+        <label class="f">Name<input type="text" id="cName" autocomplete="off"></label>
+        <label class="f">Text<textarea id="cText" placeholder="Paste or type one requirement statement"></textarea></label>
+        <button class="btn" type="button" id="cClear">Clear</button>
+      </div>
+      <div aria-live="polite"><div class="pat" id="cPat">Pattern: type a requirement to check it</div><ul class="flags" id="cFlags"></ul></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="example">
+  <div class="wrap">
+    <h2>Worked example: the greenhouse model, built in eight steps</h2>
+    <p>The system is a fictional Greenhouse Climate Controller (GCC). Its low-level requirements come from a fictional “Greenhouse Automation Code”, which stands in for the role the EU AI Act plays in your coursework. Step through to see each decision. The newest additions are shaded.</p>
+    <div class="stepper">
+      <div class="stp">
+        <div aria-live="polite"><div class="k" id="exK"></div><h3 id="exH"></h3><p id="exP"></p></div>
+        <div class="nav2"><div class="dots" id="exDots"></div><div class="ctl"><button class="btn" type="button" id="exPrev">Previous</button><button class="btn primary" type="button" id="exNext">Next step</button></div></div>
+      </div>
+      <div><div class="fig scroll wide"><svg id="exSvg" role="img" aria-label="Greenhouse requirements diagram at the current step"></svg></div><p class="hint">Scroll sideways to see the whole diagram.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="build">
+  <div class="wrap">
+    <h2>Your build path, from the case study to a low-level diagram you can defend</h2>
+    <p>These are prompts, not answers. They tell you where to look and what to decide. Your ticks are kept in this browser only.</p>
+    <p>Your <a href="https://claude.ai/artifact/XvQqDpuwmkjWR5uhTfbva6" target="_blank" rel="noopener">Patient Data Risk Map</a> already holds three kinds of material, and each has a different job in SysML:</p>
+    <div class="cards">
+      <div class="card"><h3>Article paragraphs = sources</h3><p>The lit paragraphs of Article 10 and Article 14(4) are where low-level requirements come from. Cite them using your chosen convention (A or B above).</p></div>
+      <div class="card"><h3>Risks (R10-, R14-) = rationale</h3><p>A risk explains why a requirement is needed. It belongs in your 1.1 prose and in rationale comments, not in requirement text.</p></div>
+      <div class="card"><h3>Measures (M1–M11) = design responses</h3><p>A measure is an answer in solution terms: a register, a gate, a panel. It becomes a block in the low-level BDD that «satisfy»s a requirement. It is not itself a requirement.</p></div>
+    </div>
+    <ul class="steps" id="buildSteps"></ul>
+  </div>
+</section>
+
+<section class="band" id="sheet">
+  <div class="wrap">
+    <h2>Spreadsheet columns that keep the sheet and the diagrams in step</h2>
+    <p>Add these columns as you refine your requirements spreadsheet. Each one maps to something a marker can see in the model. The clarification note says the Requirements Document and the Volere template are separate documents, so keep this sheet separate from your 1.1 text too.</p>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Column</th><th>What goes in it</th><th>Where it shows in SysML</th></tr></thead>
+      <tbody id="sheetBody"></tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="band" id="check">
+  <div class="wrap">
+    <h2>Self-check against the five Part 1.2 marking characteristics</h2>
+    <p>The brief marks 1.2 on completeness, decomposition, abstraction, problem–implementation separation and notation. Run this list before each submission draft. Ticks are kept in this browser only.</p>
+    <div class="cgrid" id="checkGrid"></div>
+    <p class="score" id="checkScore"></p>
+    <button class="btn" type="button" id="checkReset">Clear all ticks</button>
+  </div>
+</section>
+
+<section class="band" id="quiz">
+  <div class="wrap">
+    <h2>Quiz: arrows, keywords and levels</h2>
+    <p>Eight questions on the greenhouse example. Pick an answer to see why it is right or wrong.</p>
+    <div class="quiz" id="quizBox"></div>
+    <p class="score" id="quizScore"></p>
+  </div>
+</section>
+
+<section class="band" id="lab">
+  <div class="wrap">
+    <h2>Conventions to confirm with Dr Meacham in lab</h2>
+    <p>SysML allows several correct ways to do these things. Your marker may have a house style. Asking early saves rework.</p>
+    <ul class="steps" id="labList"></ul>
+  </div>
+</section>
+
+<section class="band" id="sources">
+  <div class="wrap">
+    <h2>Sources</h2>
+    <p>Course documents: the Coursework 1 Brief, the Case Study PDF and the Clarification on Requirements Document, all in this project.</p>
+    <ol class="src">
+      <li><a href="https://www.omg.org/spec/SysML/" target="_blank" rel="noopener">OMG, Systems Modeling Language specifications</a>: SysML 1.6 (Dec 2019), 1.7 (Jun 2024), 2.0 (Sep 2025)</li>
+      <li><a href="https://ns12.webel.com.au/node/1443" target="_blank" rel="noopener">Webel IT, SysML 1.6 extracts on DeriveReqt</a>: direction from derived (client) to source (supplier)</li>
+      <li><a href="https://vps1.webel.com.au/node/1437" target="_blank" rel="noopener">Webel IT, SysML 1.6 extracts on Requirement and compound requirements</a>: containment and the default interpretation</li>
+      <li><a href="https://ns12.webel.com.au/taxonomy/term/889" target="_blank" rel="noopener">Webel IT, SysML 1.6 extracts: rationale attached to «deriveReqt»</a></li>
+      <li><a href="https://docs.nomagic.com/x/nLvuB" target="_blank" rel="noopener">No Magic (Cameo) SysML Plugin documentation: Satisfy</a></li>
+      <li><a href="https://sparxsystems.com/enterprise_architect_user_guide/16.0/guide_books/ensuring_a_requirement_is_satisfied.html" target="_blank" rel="noopener">Sparx Systems, Ensuring a Requirement is Satisfied</a></li>
+      <li><a href="https://sparxsystems.com/enterprise_architect_user_guide/17.1/common_aspects_of_diagrams.html" target="_blank" rel="noopener">Sparx Systems, Common Aspects of Diagrams</a>: frame header syntax</li>
+      <li><a href="https://imap.sparxsystems.com/enterprise_architect_user_guide/17.2/traceability_to_model_elements.html" target="_blank" rel="noopener">Sparx Systems, Traceability to Model Elements</a>: «trace»</li>
+      <li><a href="https://support.ptc.com/help/modeler/r9.4/en/Integrity_Modeler/sysml/SysML_Requirement_item.html" target="_blank" rel="noopener">PTC Modeler help, Requirement (SysML item)</a>: derived, derivedFrom, satisfiedBy and other callout properties</li>
+      <li><a href="https://support.ptc.com/help/modeler/r10.2/en/Modeler/sysml/SysML_Rationale.html" target="_blank" rel="noopener">PTC Modeler help, Rationale (SysML)</a></li>
+      <li><a href="https://support.ptc.com/help/modeler/r10.2/en/Modeler/sysml/SysML_Requirement_Diagram.html" target="_blank" rel="noopener">PTC Modeler help, Requirement diagram</a>: Copy drawn from slave to master</li>
+      <li><a href="https://re-magazine.ireb.org/articles/modeling-requirements-with-sysml" target="_blank" rel="noopener">Roques, P., Modeling Requirements with SysML, IREB RE Magazine</a></li>
+      <li><a href="https://issues.omg.org/issues/SYSML17-57" target="_blank" rel="noopener">OMG issue SYSML17-57, Refine limitations</a></li>
+      <li><a href="https://arxiv.org/pdf/2410.21288" target="_blank" rel="noopener">Digital requirements engineering with an INCOSE-derived SysML meta-model (arXiv 2410.21288)</a>: trace discouraged alongside specific relationships</li>
+      <li><a href="https://www.incose.org/docs/default-source/working-groups/requirements-wg/guidetowritingrequirements/incose_rwg_gtwr_v4_summary_sheet.pdf" target="_blank" rel="noopener">INCOSE, Guide to Writing Requirements v4, Summary Sheet (2023)</a></li>
+      <li><a href="https://sites.google.com/vierhauser.net/ears2018/overview-of-ears" target="_blank" rel="noopener">EARS 2018 workshop, Overview of EARS</a>, citing Mavin, A. et al. (2009) Easy Approach to Requirements Syntax, RE’09, IEEE</li>
+      <li><a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-10" target="_blank" rel="noopener">EU AI Act Service Desk, Article 10</a> and <a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-14" target="_blank" rel="noopener">Article 14</a></li>
+      <li>Further reading: Friedenthal, S., Moore, A. and Steiner, R., <i>A Practical Guide to SysML</i>, 3rd edn, Morgan Kaufmann, 2014</li>
+    </ol>
+  </div>
+</section>
+</main>
+<footer>
+  <div class="wrap">Page made 15 November 2026. The brief allows AI for learning; its restrictions apply to what you submit. Write your requirements, names and links yourself, and don’t reuse wording from this page. Notation sources were found with AI-assisted searching; check each before citing it.</div>
+</footer>
+
+<script>
+{
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- SVG drawing kit ---------- */
+const cv=document.createElement('canvas').getContext('2d');
+const FF='Inter, system-ui, -apple-system, "Segoe UI", sans-serif';
+const tw=(t,s,w)=>{cv.font=`${w||400} ${s}px ${FF}`;return cv.measureText(t).width};
+const wrap=(t,max,s,w)=>{const out=[];let cur='';t.split(' ').forEach(word=>{const n=cur?cur+' '+word:word;if(cur&&tw(n,s,w)>max){out.push(cur);cur=word}else cur=n});if(cur)out.push(cur);return out};
+const pt=p=>p[0].toFixed(1)+' '+p[1].toFixed(1);
+const T=(b,f=.5)=>[b.x+b.w*f,b.y],B=(b,f=.5)=>[b.x+b.w*f,b.y+b.h],L=(b,f=.5)=>[b.x,b.y+b.h*f],R=(b,f=.5)=>[b.x+b.w,b.y+b.h*f];
+function req(o){
+  const p=11,cx=o.x+o.w/2,rows={};let y=o.y+19,s='';
+  s+=`<text class="kw" x="${cx}" y="${y}" text-anchor="middle">«requirement»</text>`;rows.kw=y-4;
+  y+=19;rows.name=y-5;
+  const nl=wrap(o.name,o.w-2*p,14,600);
+  nl.forEach((l,i)=>{s+=`<text class="nm" x="${cx}" y="${y+i*17}" text-anchor="middle">${esc(l)}</text>`});
+  y+=(nl.length-1)*17+11;
+  s+=`<line class="ln" x1="${o.x}" y1="${y}" x2="${o.x+o.w}" y2="${y}"/>`;
+  y+=19;rows.id=y-5;
+  s+=`<text class="pr" x="${o.x+p}" y="${y}">id = "${esc(o.id)}"</text>`;
+  if(o.text){const tl=wrap(`text = "${o.text}"`,o.w-2*p,13,400);y+=18;rows.text=y-5;
+    tl.forEach((l,i)=>{s+=`<text class="pr" x="${o.x+p}" y="${y+i*16}">${esc(l)}</text>`});y+=(tl.length-1)*16}
+  const h=y+12-o.y,b={x:o.x,y:o.y,w:o.w,h};
+  return {b,rows,s:`<rect class="bx" x="${o.x}" y="${o.y}" width="${o.w}" height="${h}"/>${s}`};
+}
+function block(o){
+  const cx=o.x+o.w/2,nl=wrap(o.name,o.w-20,14,600),h=30+nl.length*17+6;
+  let s=`<text class="kw" x="${cx}" y="${o.y+19}" text-anchor="middle">«${o.kw||'block'}»</text>`;
+  nl.forEach((l,i)=>{s+=`<text class="nm" x="${cx}" y="${o.y+38+i*17}" text-anchor="middle">${esc(l)}</text>`});
+  return {b:{x:o.x,y:o.y,w:o.w,h},s:`<rect class="bx" x="${o.x}" y="${o.y}" width="${o.w}" height="${h}"/>${s}`};
+}
+function usecase(o){
+  const nl=wrap(o.name,o.rx*1.5,14,600);let s=`<ellipse class="bx" cx="${o.cx}" cy="${o.cy}" rx="${o.rx}" ry="${o.ry}"/>`;
+  const y0=o.cy-(nl.length-1)*8.5+5;nl.forEach((l,i)=>{s+=`<text class="nm" x="${o.cx}" y="${y0+i*17}" text-anchor="middle">${esc(l)}</text>`});
+  return {b:{x:o.cx-o.rx,y:o.cy-o.ry,w:o.rx*2,h:o.ry*2},s};
+}
+function note(o){
+  const tl=wrap(o.text,o.w-20,13,400),h=30+tl.length*16+8,x=o.x,y=o.y,w=o.w,f=12;
+  let s=`<path class="nb" d="M${x} ${y} H${x+w-f} L${x+w} ${y+f} V${y+h} H${x} Z"/><path class="ln" d="M${x+w-f} ${y} V${y+f} H${x+w}"/>`;
+  s+=`<text class="kw" x="${x+10}" y="${y+19}">«${o.kw}»</text>`;
+  tl.forEach((l,i)=>{s+=`<text class="pr" x="${x+10}" y="${y+38+i*16}">${esc(l)}</text>`});
+  return {b:{x,y,w,h},s};
+}
+function frame(o){
+  const rest=` [${o.type}] ${o.name} [${o.diag}]`,tW=tw(o.kind,13,700)+tw(rest,13,400)+28,th=25;
+  return `<rect class="frm" x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"/><path class="frm" d="M${o.x} ${o.y+th} H${o.x+tW-10} L${o.x+tW} ${o.y+th-10} V${o.y}"/><text class="hd" x="${o.x+9}" y="${o.y+17}"><tspan font-weight="700">${esc(o.kind)}</tspan>${esc(rest)}</text>`;
+}
+function head(a,b){const g=Math.atan2(b[1]-a[1],b[0]-a[0]),l=12,s=.42;
+  return `<path class="ah" d="M${pt([b[0]-l*Math.cos(g-s),b[1]-l*Math.sin(g-s)])} L${pt(b)} L${pt([b[0]-l*Math.cos(g+s),b[1]-l*Math.sin(g+s)])}"/>`}
+function along(pts,t){let tot=0;const seg=[];for(let i=1;i<pts.length;i++){const d=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);seg.push(d);tot+=d}
+  let r=tot*t;for(let i=0;i<seg.length;i++){if(r<=seg[i]){const f=seg[i]?r/seg[i]:0;return [pts[i][0]+(pts[i+1][0]-pts[i][0])*f,pts[i][1]+(pts[i+1][1]-pts[i][1])*f]}r-=seg[i]}return pts[pts.length-1]}
+function label(p,txt){const w=tw(txt,12.5,500)+12;return `<rect class="lb" x="${(p[0]-w/2).toFixed(1)}" y="${(p[1]-10).toFixed(1)}" width="${w.toFixed(1)}" height="19"/><text class="kwl" x="${p[0].toFixed(1)}" y="${(p[1]+4.5).toFixed(1)}" text-anchor="middle">${esc(txt)}</text>`}
+function dep(pts,kw,t){return `<path class="dl" d="M${pts.map(pt).join(' L')}"/>${head(pts[pts.length-2],pts[pts.length-1])}${kw?label(along(pts,t==null?.5:t),'«'+kw+'»'):''}`}
+function cross(a,b){const g=Math.atan2(b[1]-a[1],b[0]-a[0]),r=7,c=[a[0]+r*Math.cos(g),a[1]+r*Math.sin(g)];
+  return `<circle class="xh" cx="${c[0].toFixed(1)}" cy="${c[1].toFixed(1)}" r="${r}"/><path class="ah" d="M${c[0]-r} ${c[1]} H${c[0]+r} M${c[0]} ${c[1]-r} V${c[1]+r}"/>`}
+function contain(pts){return `<path class="sl" d="M${pts.map(pt).join(' L')}"/>${cross(pts[0],pts[1])}`}
+function tree(par,kids){const p=B(par),top=Math.min(...kids.map(k=>k.y)),by=p[1]+(top-p[1])*.5;
+  const xs=kids.map(k=>k.x+k.w/2);let s=`<path class="sl" d="M${pt(p)} V${by} M${Math.min(...xs)} ${by} H${Math.max(...xs)} ${xs.map(x=>`M${x} ${by} V${top}`).join(' ')}"/>`;
+  return s+cross(p,[p[0],by]);}
+const anchor=(a,b)=>`<path class="an" d="M${pt(a)} L${pt(b)}"/>`;
+const mk=(x,y,n)=>`<g class="mk"><circle cx="${x}" cy="${y}" r="11"/><text x="${x}" y="${y+4.5}" text-anchor="middle">${n}</text></g>`;
+
+/* ---------- 1. chain ---------- */
+const MINI={
+ src:'<rect x="38" y="4" width="44" height="58" fill="none" stroke="currentColor" stroke-width="1.5"/>'+[14,22,30,38,46].map(y=>`<line x1="45" x2="${y==46?62:75}" y1="${y}" y2="${y}" stroke="currentColor" stroke-width="1.5"/>`).join(''),
+ hl:'<rect x="40" y="2" width="40" height="18" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M60 20 V34 M18 34 H102 M18 34 V46 M60 34 V46 M102 34 V46" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="60" cy="24" r="4" fill="var(--bg)" stroke="currentColor" stroke-width="1.3"/>'+[4,46,88].map(x=>`<rect x="${x}" y="46" width="28" height="16" fill="none" stroke="currentColor" stroke-width="1.5"/>`).join(''),
+ ll:'<rect x="10" y="2" width="40" height="18" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="70" y="2" width="40" height="18" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M18 46 L28 22 M54 46 L34 22 M94 46 L90 22" fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 3"/>'+[4,40,76].map(x=>`<rect x="${x}" y="46" width="30" height="16" fill="none" stroke="currentColor" stroke-width="1.5"/>`).join(''),
+ bdd:'<rect x="38" y="2" width="44" height="20" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M60 22 L56 27 L60 32 L64 27 Z" fill="currentColor"/><path d="M60 32 V38 M24 38 H96 M24 38 V46 M96 38 V46" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="6" y="46" width="36" height="16" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="78" y="46" width="36" height="16" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+ sd:[20,60,100].map(x=>`<rect x="${x-14}" y="2" width="28" height="12" fill="none" stroke="currentColor" stroke-width="1.5"/><line x1="${x}" x2="${x}" y1="14" y2="64" stroke="currentColor" stroke-width="1.3" stroke-dasharray="3 3"/>`).join('')+'<path d="M20 26 H58 M54 22 L60 26 L54 30 M60 40 H98 M94 36 L100 40 L94 44 M100 54 H22 M26 50 L20 54 L26 58" fill="none" stroke="currentColor" stroke-width="1.5"/>',
+ map:'<rect x="4" y="4" width="112" height="58" fill="none" stroke="currentColor" stroke-width="1.5"/>'+[18,32,46].map(y=>`<line x1="4" x2="116" y1="${y}" y2="${y}" stroke="currentColor" stroke-width="1.2"/>`).join('')+[32,60,88].map(x=>`<line x1="${x}" x2="${x}" y1="4" y2="62" stroke="currentColor" stroke-width="1.2"/>`).join('')
+};
+const CHAIN=[
+ {k:'src',tag:['','Source'],t:'Case study and your 1.1 document',l:'needs read out',holds:'The shared scenario plus your extension: background, scenarios and needs arising from Article 14 and Article 10, with references. No diagrams, per the clarification note.',link:'You read the principal system needs out of it. Those become the high-level requirements.',marks:'1.1 is worth 20 marks.',done:'Every need you plan to model can be pointed to in the case study or your extension.'},
+ {k:'hl',tag:['req',' high-level'],t:'High-level Requirements diagram',l:'low-level requirements point back with «deriveReqt»',holds:'The principal system requirements from the case study, at an abstraction that leaves technology open. Usually one composite requirement decomposed by containment.',link:'Low-level requirements point back here with «deriveReqt».',marks:'Shares the 10 marks of 1.2 with the low-level diagram.',done:'Each principal need from the case study has a home, and no requirement names a technology.'},
+ {k:'ll',tag:['req',' low-level'],t:'Low-level Requirements diagram',l:'blocks point back with «satisfy»',holds:'4–6 requirements derived from provisions of Article 14 and Article 10, at least one from each, each traced to a high-level requirement.',link:'Blocks in the low-level BDD will point here with «satisfy».',marks:'Part of 1.2 (10 marks) and the spine of 2.5 (25 marks).',done:'Every low-level requirement has a high-level parent, a cited provision and a mechanism you plan to show.'},
+ {k:'bdd',tag:['bdd',' 2.2'],t:'Block Definition Diagrams',l:'blocks become lifelines',holds:'High-level: logical parts, the system boundary and external sources. Low-level: the researched solution, including the mechanisms for Article 14 and Article 10, normally with no more than six extra major blocks.',link:'The same blocks appear as lifelines in the sequence diagram.',marks:'2.2 is worth 10 marks.',done:'Each low-level requirement is satisfied by a block you can name.'},
+ {k:'sd',tag:['sd',' 2.3'],t:'Sequence diagram',l:'cited as evidence',holds:'One end-to-end monitoring, prediction and professional-review scenario, with conditional or adaptive behaviour and at least one conformance behaviour.',link:'Its messages and fragments are the behavioural evidence you cite in 2.5.',marks:'2.3 is worth 5 marks.',done:'The mechanism behind at least one low-level requirement is visible as messages.'},
+ {k:'map',tag:['','2.5 mapping'],t:'Conformance-by-design mapping',l:'',holds:'2–4 rows of EU AI Act requirement → SysML system requirement → design response → model evidence, each with a limitation.',link:'Each row cites a low-level requirement ID, a block and a place in a diagram.',marks:'2.5 is worth 25 marks.',done:'A marker can follow every row through your diagrams using the IDs alone.'}
+];
+let chainSel=1;
+function drawChain(){
+  $('#chainRow').innerHTML=CHAIN.map((c,i)=>`<button class="node" type="button" data-i="${i}" aria-pressed="${i===chainSel}"><span class="tag"><b>${c.tag[0]}</b>${c.tag[1]}</span><svg viewBox="0 0 120 66" aria-hidden="true">${MINI[c.k]}</svg><span class="nt">${c.t}</span>${c.l?`<span class="nl">Next: ${esc(c.l)}</span>`:''}</button>`).join('');
+  const c=CHAIN[chainSel];
+  $('#chainPanel').innerHTML=`<div><h4>What it holds</h4><p>${esc(c.holds)}</p></div><div><h4>How it links on</h4><p>${esc(c.link)}</p></div><div><h4>Marks</h4><p>${esc(c.marks)}</p></div><div><h4>Finished when</h4><p>${esc(c.done)}</p></div>`;
+}
+$('#chainRow').addEventListener('click',e=>{const b=e.target.closest('.node');if(!b)return;chainSel=+b.dataset.i;drawChain()});
+
+/* ---------- 2. anatomy ---------- */
+function drawAnat(){
+  const r=req({x:90,y:58,w:340,id:'HLR-02',name:'Climate Adjustment',text:'The GCC shall adjust the climate of any zone that is outside its set ranges.'});
+  const H=r.b.y+r.b.h+34;
+  let s=frame({x:6,y:6,w:588,h:H-12,kind:'req',type:'Package',name:'GCC Requirements',diag:'High-Level Requirements'})+r.s;
+  [['kw',1],['name',2],['id',3],['text',4]].forEach(([k,n])=>{const y=r.rows[k];s+=`<line class="an" x1="${r.b.x+r.b.w+4}" y1="${y}" x2="${(k==='kw'||k==='id')?476:498}" y2="${y}"/>`+mk((k==='kw'||k==='id')?488:510,y,n)});
+  const svg=$('#anatSvg');svg.setAttribute('viewBox',`0 0 600 ${H}`);svg.innerHTML=s;
+}
+
+/* ---------- 3. relationships ---------- */
+const REL=[
+ {k:'containment',n:'Containment',use:'High-level',notation:'Solid line with a crosshair (⊕) at the parent end. No arrowhead.',read:'“HLR-00 contains HLR-01”, or “HLR-01 is a sub-requirement of HLR-00”.',tail:'There is no client and supplier: the crosshair marks the owner.',call:'The child is nested under the parent in the model browser; tools list it as a sub-requirement.',mean:'Decomposition. SysML’s default reading is that the parent is satisfied when all its children are, so the children together must say what the parent says.',here:'The main relationship on your high-level diagram. Rarely right for low-level conformance requirements, which add detail.',mist:['Crosshair drawn at the child end','Using containment to mean “came from” (that is derive)','Children that add things the parent never said']},
+ {k:'deriveReqt',n:'«deriveReqt»',use:'Low-level',notation:'Dashed line, open arrowhead on the source requirement, keyword «deriveReqt».',read:'“LLR-W1 is derived from HLR-02.”',tail:'Tail (client): the derived requirement. Head (supplier): the requirement it was worked out from. Both ends must be requirements.',call:'The derived requirement shows derivedFrom: HLR-02. The source shows derived: LLR-W1.',mean:'A new requirement produced by analysing another, often one level down. The SysML specification’s example is lower-level requirements derived from a system requirement.',here:'Your low-level requirements to their high-level parents. Also from a low-level requirement to a provision element, if you choose option B.',mist:['Arrowhead on the low-level requirement','Writing «derive» (a different UML keyword) or “derives”','Using it from a block or use case, where only requirements are allowed']},
+ {k:'refine',n:'«refine»',use:'Optional',notation:'Dashed line, open arrowhead on the requirement, keyword «refine».',read:'“Use case Irrigate Zone refines HLR-02.”',tail:'Tail: the refining element, typically a use case, activity or interaction. Head: the requirement.',call:'The requirement shows refinedBy. The element shows refines.',mean:'Clarifies what a text requirement means by modelling it. Unlike derive, refine can link a requirement to any kind of model element.',here:'Not required for 1.2. Do not pick it just because the brief uses the word “refine”.',mist:['Using «refine» for low-level to high-level because of the brief’s wording','Arrowhead on the use case instead of the requirement']},
+ {k:'satisfy',n:'«satisfy»',use:'Part 2.2',notation:'Dashed line, open arrowhead on the requirement, keyword «satisfy».',read:'“Block Zone Water Valve Controller satisfies LLR-W1.”',tail:'Tail (client): the design element, such as a block or part. Head (supplier): the requirement.',call:'The requirement shows satisfiedBy. The block shows satisfies.',mean:'The design element is intended to fulfil the requirement. This is the bridge from problem to solution.',here:'From low-level BDD blocks to your low-level requirements. It is the model evidence in 2.5. Keep it off the high-level requirements diagram.',mist:['Drawn from the requirement to the block','Satisfy between two requirements (use derive)','Adding blocks to the high-level diagram before any design exists']},
+ {k:'verify',n:'«verify»',use:'Not asked',notation:'Dashed line, open arrowhead on the requirement, keyword «verify».',read:'“Test case Daily Cap Test verifies LLR-W1.”',tail:'Tail: a «testCase» or other verifying element. Head: the requirement.',call:'The requirement shows verifiedBy. The test case shows verifies.',mean:'A check that the built system meets the requirement. Satisfy is about design; verify is about testing.',here:'Not asked for in the brief. You can record a verification method in your spreadsheet instead.',mist:['Confusing verify with satisfy']},
+ {k:'trace',n:'«trace»',use:'Sparingly',notation:'Dashed line, open arrowhead on the earlier or source element, keyword «trace».',read:'“HLR-02 traces to R-17 in the old controller spec.”',tail:'Tail: the later element. Head: the up-process element it relates to.',call:'Shown as tracedTo / tracedFrom; some tools say tracesTo.',mean:'A general link with no specific meaning. The specification advises against using it together with the more specific relationships.',here:'Only for a loose link where nothing specific fits. Never alongside a «deriveReqt» between the same pair.',mist:['Using trace everywhere instead of choosing derive, satisfy or refine']},
+ {k:'copy',n:'«copy»',use:'Not needed',notation:'Dashed line, open arrowhead on the master, keyword «copy».',read:'“GCC Water Allowance is a copy of Water Code WC-3.1.”',tail:'Tail: the copy (slave). Head: the master requirement in another specification.',call:'The copy shows master: WC-3.1.',mean:'Reuses a requirement from another specification. The copy’s text mirrors the master and is not edited on its own.',here:'Not needed. You interpret Article provisions into system requirements; you do not reuse them word for word.',mist:['Using copy for legal text you have actually interpreted']}
+];
+let relSel=1;
+function relSvg(k){
+  const LB={x:20,y:90,w:176},RB={x:364,y:90,w:176};
+  if(k==='containment'){const p=req({x:180,y:14,w:200,id:'HLR-00',name:'Climate Management'}),c=req({x:180,y:150,w:200,id:'HLR-01',name:'Zone Monitoring'});
+    return p.s+c.s+contain([B(p.b),T(c.b)]);}
+  let left;
+  if(k==='refine')left=usecase({cx:119,cy:128,rx:95,ry:36,name:'Irrigate Zone'});
+  else if(k==='satisfy')left=block({...LB,name:'Zone Water Valve Controller'});
+  else if(k==='verify')left=block({...LB,kw:'testCase',name:'Daily Cap Test'});
+  else if(k==='deriveReqt')left=req({...LB,id:'LLR-W1',name:'Daily Water Cap'});
+  else if(k==='trace')left=req({...LB,id:'HLR-02',name:'Climate Adjustment'});
+  else left=req({...LB,id:'GCC-WA-1',name:'GCC Water Allowance'});
+  const right=k==='deriveReqt'||k==='refine'?req({...RB,id:'HLR-02',name:'Climate Adjustment'}):k==='trace'?req({...RB,id:'R-17',name:'Old Spec Watering Log'}):k==='copy'?req({...RB,id:'WC-3.1',name:'Water Code Allowance'}):req({...RB,id:'LLR-W1',name:'Daily Water Cap'});
+  const y=Math.min(left.b.y+left.b.h/2,right.b.y+right.b.h/2);
+  return left.s+right.s+dep([[left.b.x+left.b.w,y],[right.b.x,y]],k,.5)+`<text class="kw" x="${left.b.x}" y="${left.b.y-12}">tail (client)</text><text class="kw" x="${right.b.x}" y="${right.b.y-12}">head (supplier)</text>`;
+}
+function drawRel(){
+  $('#relTabs').innerHTML=REL.map((r,i)=>`<button type="button" role="tab" aria-selected="${i===relSel}" data-i="${i}">${esc(r.n)}</button>`).join('');
+  const r=REL[relSel];$('#relSvg').innerHTML=relSvg(r.k);
+  $('#relInfo').innerHTML=`<h3>${esc(r.n)}<span class="use">${esc(r.use)}</span></h3><dl class="defs" style="margin-top:10px"><dt>Notation</dt><dd>${esc(r.notation)}</dd><dt>Read it as</dt><dd>${esc(r.read)}</dd><dt>Ends</dt><dd>${esc(r.tail)}</dd><dt>Callout names</dt><dd>${esc(r.call)}</dd><dt>Meaning</dt><dd>${esc(r.mean)}</dd><dt>In this coursework</dt><dd>${esc(r.here)}</dd><dt>Common mistakes</dt><dd><ul class="mist">${r.mist.map(m=>`<li>${esc(m)}</li>`).join('')}</ul></dd></dl>`;
+}
+$('#relTabs').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;relSel=+b.dataset.i;drawRel()});
+
+/* ---------- 4. wizard ---------- */
+const WQ=[
+ {q:'Is the other end a design element, such as a block or part, that is meant to fulfil the requirement?',a:'«satisfy», drawn from the design element to the requirement. This belongs to Part 2.2.'},
+ {q:'Is the other end a test or check of the built system?',a:'«verify», drawn from the test case to the requirement. Not asked for in this brief.'},
+ {q:'Is the other end a model, such as a use case, activity or sequence, that explains what the requirement means?',a:'«refine», drawn from the model element to the requirement.'},
+ {q:'Are both ends requirements, and is the lower one a single slice of the upper one, so that all the slices together say exactly what the upper one says?',a:'Containment, with the crosshair on the upper (parent) requirement.'},
+ {q:'Are both ends requirements, and did you work the lower one out by analysing the upper one (or a source provision), adding detail it did not state?',a:'«deriveReqt», drawn from the derived requirement to its source. This is the usual link from your low-level requirements to high-level ones.'},
+ {q:'Is it a word-for-word reuse of a requirement from another specification?',a:'«copy», drawn from the copy to the master. Unlikely in this coursework.'}
+];
+let wStep=0,wTrail=[];
+function drawWiz(){
+  const w=$('#wiz');
+  if(wStep>=WQ.length){w.innerHTML=`<p class="ans"><b>Use «trace», sparingly.</b> None of the specific relationships fit. Check you are not missing one, and never pair trace with a specific link between the same two elements.</p><button class="btn" type="button" data-r="1">Start again</button>${wTrail.length?`<p class="trail">Your answers: ${wTrail.join(' · ')}</p>`:''}`;return}
+  if(wStep<0){const a=WQ[-wStep-1].a;w.innerHTML=`<p class="ans"><b>${esc(a)}</b></p><button class="btn" type="button" data-r="1">Start again</button><p class="trail">Your answers: ${wTrail.join(' · ')}</p>`;return}
+  w.innerHTML=`<p class="small mut" style="margin:0 0 6px">Question ${wStep+1} of ${WQ.length}</p><p class="q">${esc(WQ[wStep].q)}</p><div class="row"><button class="btn primary" type="button" data-y="1">Yes</button><button class="btn" type="button" data-n="1">No</button>${wStep?'<button class="btn" type="button" data-r="1">Start again</button>':''}</div>`;
+}
+$('#wiz').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.r){wStep=0;wTrail=[]}else if(b.dataset.y){wTrail.push(`Q${wStep+1} yes`);wStep=-(wStep+1)}else if(b.dataset.n){wTrail.push(`Q${wStep+1} no`);wStep++}
+  drawWiz()});
+
+/* ---------- 5. wording ---------- */
+const EARS=[
+ ['Ubiquitous','The <system> shall <response>','The GCC shall keep a record of every climate action, automatic or manual.'],
+ ['Event-driven','When <trigger>, the <system> shall <response>','When a zone leaves its set ranges, the GCC shall alert the grower.'],
+ ['State-driven','While <state>, the <system> shall <response>','While a person is present in a zone, the GCC shall prevent misting in that zone.'],
+ ['Unwanted behaviour','If <trigger>, then the <system> shall <response>','If water flow continues after an irrigation cycle has ended, then the GCC shall close that zone’s water supply.'],
+ ['Optional feature','Where <feature is included>, the <system> shall <response>','Where a zone has a shade screen, the GCC shall allow the grower to set the light level at which the screen closes.']
+];
+$('#earsBody').innerHTML=EARS.map(r=>`<tr><th data-l="Pattern">${r[0]}</th><td data-l="Template"><code>${esc(r[1])}</code></td><td data-l="Example">${esc(r[2])}</td></tr>`).join('');
+const VAGUE=['appropriate','appropriately','adequate','adequately','sufficient','sufficiently','suitable','user-friendly','easy','easily','simple','intuitive','quickly','promptly','fast','timely','immediately','real-time','efficient','efficiently','effective','effectively','robust','seamless','seamlessly','flexible','optimal','optimise','optimize','maximise','maximize','minimise','minimize','as possible','where possible','if possible','as needed','as required','normally','usually','generally','support','supports','handle','handles','manage','manages'];
+const TECH=['database','sql','api','rest','fhir','hl7','json','xml','cloud','aws','azure','server','microservice','microservices','kafka','mqtt','docker','kubernetes','python','java','javascript','react','tensorflow','pytorch','shap','lime','xgboost','lstm','neural network','random forest','llm','blockchain','oauth','jwt','aes','tls','button','dropdown','drop-down','pop-up','popup','checkbox','dashboard','tablet','smartphone','mobile app','email','sms'];
+$('#vagueChips').innerHTML=['appropriate','adequate','sufficient','user-friendly','quickly','timely','efficient','robust','seamless','as possible','as needed','support','manage','handle'].map(w=>`<span>${w}</span>`).join('');
+$('#techChips').innerHTML=['FHIR / HL7','REST API','cloud, AWS, Azure','Kafka, MQTT','SHAP, LIME','XGBoost, LSTM','neural network','OAuth, JWT','dashboard','button, pop-up','email, SMS'].map(w=>`<span>${w}</span>`).join('');
+const hasWord=(lt,w)=>new RegExp('(^|[^a-z])'+w.replace(/[-/]/g,m=>'\\'+m)+'($|[^a-z])').test(lt);
+function runCheck(){
+  const sys=$('#cSys').value.trim(),id=$('#cId').value.trim(),name=$('#cName').value.trim(),t=$('#cText').value.trim(),lt=t.toLowerCase().replace(/[’']/g,"'");
+  const f=[];
+  if(!t&&!id&&!name){$('#cPat').textContent='Pattern: type a requirement to check it';$('#cFlags').innerHTML='';return}
+  if(id&&/\s/.test(id))f.push(['warn','The ID contains a space. Keep IDs as one token so they match exactly everywhere.']);
+  if(name){if(/\bshall\b/i.test(name))f.push(['warn','The name contains “shall”. Keep the name a short label and put the statement in the text.']);
+    const nw=name.split(/\s+/).length;if(nw>6)f.push(['info',`The name is ${nw} words. Two to five is easier to read on a diagram.`]);}
+  let pat='Pattern: not recognised';
+  if(t){
+    const n=(lt.match(/\bshall\b/g)||[]).length;
+    if(n===0)f.push(['warn','No “shall”. A mandatory requirement normally uses “shall”.']);
+    else if(n>1)f.push(['warn',`${n} uses of “shall”. That usually means more than one requirement: consider splitting.`]);
+    else f.push(['ok','One “shall”.']);
+    if(/\b(should|will|may|must)\b/.test(lt))f.push(['info','Uses should, will, may or must. Choose one word for mandatory statements (usually “shall”) and use it throughout.']);
+    if(/and\/or|\betc\b|\be\.g\.|\bi\.e\./.test(lt))f.push(['warn','“and/or”, “etc.”, “e.g.” or “i.e.” leaves the scope open. Say exactly what is meant, or split.']);
+    const after=lt.split(/\bshall\b/).slice(1).join(' ');
+    if(after&&/\b(and|or)\b/.test(after))f.push(['info','“and” or “or” after “shall”. Check this is one capability, not two joined together.']);
+    const v=VAGUE.filter(w=>hasWord(lt,w));if(v.length)f.push(['warn',`Vague: ${v.join(', ')}. Say what observable thing would make it true.`]);
+    const te=TECH.filter(w=>hasWord(lt,w));if(te.length)f.push(['warn',`Implementation words: ${te.join(', ')}. If they name a design choice, move it to a Part 2.2 block.`]);
+    if(/\bshall be [a-z]+(ed|en)\b/.test(lt))f.push(['info','Passive voice (“shall be …ed”) hides who acts. Make your system the subject.']);
+    if(/\bshall not\b/.test(lt))f.push(['info','“shall not”. Negative requirements are hard to verify; state what the system does instead, if you can.']);
+    if(/\b(it|they|them|this)\b/.test(lt))f.push(['info','Contains it, they, them or this. Check each pronoun points to exactly one thing.']);
+    if(sys){if(!lt.includes(sys.toLowerCase()))f.push(['warn',`Does not mention “${sys}”. Name your system the same way in every requirement.`]);else f.push(['ok',`Names your system as “${sys}”.`]);}
+    const wc=t.split(/\s+/).length;if(wc>45)f.push(['info',`${wc} words. Long statements often hide two requirements.`]);
+    if(/^while\b/.test(lt)&&/\bwhen\b/.test(lt))pat='Pattern: complex (state + event)';
+    else if(/^when\b/.test(lt))pat='Pattern: event-driven (When …)';
+    else if(/^while\b/.test(lt))pat='Pattern: state-driven (While …)';
+    else if(/^if\b/.test(lt)){pat=/\bthen\b/.test(lt)?'Pattern: unwanted behaviour (If … then …)':'Pattern: looks like unwanted behaviour, but EARS writes it “If <trigger>, then the <system> shall …”'}
+    else if(/^where\b/.test(lt))pat='Pattern: optional feature (Where …)';
+    else if(/^the\b[^,]*\bshall\b/.test(lt))pat='Pattern: ubiquitous (The … shall …)';
+  }
+  $('#cPat').textContent=pat;
+  $('#cFlags').innerHTML=f.map(([c,m])=>`<li class="${c}"><span class="d" aria-hidden="true"></span><span><span class="sr" style="position:absolute;left:-9999px">${c==='warn'?'Check: ':c==='ok'?'OK: ':'Note: '}</span>${esc(m)}</span></li>`).join('');
+}
+['#cSys','#cId','#cName','#cText'].forEach(s=>$(s).addEventListener('input',runCheck));
+$('#cClear').addEventListener('click',()=>{['#cId','#cName','#cText'].forEach(s=>$(s).value='');runCheck()});
+
+/* ---------- 6. worked example ---------- */
+const STEPS=[
+ {d:'hl',h:'Draw the frame',p:'Create a requirement diagram inside a requirements package. Its header reads req [Package] GCC Requirements [High-Level Requirements]: the diagram kind, the owning element’s type, its name, then the diagram’s own name.'},
+ {d:'hl',h:'Add one composite requirement',p:'One requirement states the whole purpose in a single “shall”. It is optional, but it gives the decomposition a root and makes completeness easy to check.'},
+ {d:'hl',h:'Decompose with containment',p:'Each child is one principal need from the grower’s brief. Together the five say what the composite says, so containment is right, with the crosshair at the parent. There are no blocks and no technology, because nothing has been designed yet.'},
+ {d:'ll',h:'Bring in the parents you will trace to',p:'Open the low-level diagram and drag in only the high-level requirements you need, here HLR-02 and HLR-05. They are the same model elements as on the first diagram, not new boxes.'},
+ {d:'ll',h:'Add the low-level requirements',p:'Each comes from a clause of the fictional Automation Code: §3 on water use, §5 on misting. Each has one “shall”, is narrower and more testable than its parent, and still names no technology. Four EARS patterns appear: ubiquitous (W1), unwanted behaviour (W2), state-driven (M1) and event-driven (M2).'},
+ {d:'ll',h:'Link each to its parent with «deriveReqt»',p:'Draw each arrow from the new requirement to the high-level one it came from, so the arrowhead sits on HLR-02 or HLR-05. Read it as “LLR-W1 is derived from HLR-02”. Containment would be wrong here: these add detail the parents never stated.'},
+ {d:'ll',h:'Cite the source with «rationale»',p:'A «rationale» comment, anchored to the «deriveReqt» lines with dashed lines and no arrowheads, records which clause drove each derivation. One comment can annotate several relationships, and the requirement count stays at four.'},
+ {d:'ll',h:'Preview of Part 2.2: «satisfy»',p:'Once the design exists, blocks point at the requirements they fulfil. This is where 2.5 model evidence comes from. Whether these links are drawn on a requirements diagram or on the BDD is a convention to confirm in lab.'}
+];
+let exStep=0;
+function buildHL(){
+  const W=1000,F={x:8,y:8,w:984};
+  const comp=req({x:340,y:64,w:320,id:'HLR-00',name:'Climate Management',text:'The GCC shall keep each growing zone within the climate ranges set by the grower.'});
+  const KIDS=[['HLR-01','Zone Monitoring','The GCC shall measure the climate conditions of each growing zone.'],['HLR-02','Climate Adjustment','The GCC shall adjust the climate of any zone that is outside its set ranges.'],['HLR-03','Grower Override','The GCC shall allow the grower to override any automatic climate action.'],['HLR-04','Out-of-Range Alert','When a zone leaves its set ranges, the GCC shall alert the grower.'],['HLR-05','Action Record','The GCC shall keep a record of every climate action, automatic or manual.']];
+  const ky=comp.b.y+comp.b.h+80,kw=180,gap=(F.w-40-5*kw)/4;
+  const kids=KIDS.map((k,i)=>req({x:F.x+20+i*(kw+gap),y:ky,w:kw,id:k[0],name:k[1],text:k[2]}));
+  const H=Math.max(...kids.map(k=>k.b.y+k.b.h))+30;
+  return {W,H,items:[{s:frame({...F,h:H-16,kind:'req',type:'Package',name:'GCC Requirements',diag:'High-Level Requirements'}),st:0},{s:comp.s,st:1},{s:kids.map(k=>k.s).join('')+tree(comp.b,kids.map(k=>k.b)),st:2}]};
+}
+function buildLL(){
+  const W=1000,F={x:8,y:8,w:984};
+  const h2=req({x:290,y:64,w:230,id:'HLR-02',name:'Climate Adjustment',text:'The GCC shall adjust the climate of any zone that is outside its set ranges.'});
+  const h5=req({x:756,y:64,w:220,id:'HLR-05',name:'Action Record',text:'The GCC shall keep a record of every climate action, automatic or manual.'});
+  const nW=note({x:28,y:64,w:236,kw:'rationale',text:'Automation Code §3, water use (fictional). §3.1 sets a daily allowance per zone; §3.2 requires shut-off on leaks.'});
+  const nM=note({x:540,y:64,w:196,kw:'rationale',text:'Automation Code §5, misting (fictional). §5.2 bans misting in occupied zones; §5.4 requires a record.'});
+  const top=Math.max(h2.b.y+h2.b.h,h5.b.y+h5.b.h,nW.b.y+nW.b.h,nM.b.y+nM.b.h);
+  const ly=top+150,lw=222,lg=(F.w-40-4*lw)/3;
+  const LLS=[['LLR-W1','Daily Water Cap','The GCC shall limit the water delivered to each zone to that zone’s daily water allowance.'],['LLR-W2','Leak Shut-off','If water flow continues after an irrigation cycle has ended, then the GCC shall close that zone’s water supply.'],['LLR-M1','Occupied Zone Misting Lock','While a person is present in a zone, the GCC shall prevent misting in that zone.'],['LLR-M2','Misting Record','When misting ends in a zone, the GCC shall record the zone, the duration and the product used.']];
+  const ll=LLS.map((r,i)=>req({x:F.x+20+i*(lw+lg),y:ly,w:lw,id:r[0],name:r[1],text:r[2]}));
+  const lines=[[T(ll[0].b),B(h2.b,.18)],[T(ll[1].b),B(h2.b,.5)],[T(ll[2].b),B(h2.b,.82)],[T(ll[3].b),B(h5.b,.5)]];
+  const deps=lines.map(l=>dep(l,'deriveReqt',.3)).join('');
+  const mid=l=>along(l,.55);
+  const anc=anchor(B(nW.b,.35),mid(lines[0]))+anchor(B(nW.b,.75),mid(lines[1]))+anchor(B(nM.b,.3),mid(lines[2]))+anchor(B(nM.b,.85),mid(lines[3]));
+  const llBottom=Math.max(...ll.map(r=>r.b.y+r.b.h)),by=llBottom+110;
+  const bA=block({x:118,y:by,w:250,name:'Zone Water Valve Controller'}),bB=block({x:530,y:by,w:200,name:'Occupancy Interlock'}),bC=block({x:770,y:by,w:180,name:'Event Log'});
+  const sat=dep([T(bA.b,.3),B(ll[0].b,.6)],'satisfy',.5)+dep([T(bA.b,.7),B(ll[1].b,.4)],'satisfy',.5)+dep([T(bB.b),B(ll[2].b)],'satisfy',.5)+dep([T(bC.b),B(ll[3].b,.6)],'satisfy',.5);
+  const H=bA.b.y+bA.b.h+30;
+  return {W,H,items:[{s:frame({...F,h:H-16,kind:'req',type:'Package',name:'GCC Requirements',diag:'Low-Level Requirements: Automation Code'}),st:3},{s:h2.s+h5.s,st:3},{s:ll.map(r=>r.s).join(''),st:4},{s:deps,st:5},{s:nW.s+nM.s+anc,st:6},{s:bA.s+bB.s+bC.s+sat,st:7}]};
+}
+let HL,LL;
+function drawEx(){
+  const st=STEPS[exStep],D=st.d==='hl'?HL:LL;
+  const svg=$('#exSvg');svg.setAttribute('viewBox',`0 0 ${D.W} ${D.H}`);
+  svg.innerHTML=D.items.filter(i=>i.st<=exStep).map(i=>`<g class="${i.st===exStep?'new':''}">${i.s}</g>`).join('');
+  $('#exK').textContent=`Step ${exStep+1} of ${STEPS.length} · ${st.d==='hl'?'High-level diagram':'Low-level diagram'}`;
+  $('#exH').textContent=st.h;$('#exP').textContent=st.p;
+  $('#exDots').innerHTML=STEPS.map((s,i)=>`<button type="button" data-i="${i}" aria-label="Step ${i+1}: ${esc(s.h)}" ${i===exStep?'aria-current="true"':''}>${i+1}</button>`).join('');
+  $('#exPrev').disabled=exStep===0;$('#exNext').disabled=exStep===STEPS.length-1;
+}
+$('#exPrev').addEventListener('click',()=>{if(exStep>0){exStep--;drawEx()}});
+$('#exNext').addEventListener('click',()=>{if(exStep<STEPS.length-1){exStep++;drawEx()}});
+$('#exDots').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;exStep=+b.dataset.i;drawEx()});
+
+/* ---------- 7. build path ---------- */
+const BUILD=[
+ {h:'Fix your conventions before drawing anything',b:'<p>Decide once, write them down, then apply them everywhere:</p><ul><li>The one name for your system, used in every requirement, the BDD system block and the sequence lifeline</li><li>Your ID scheme</li><li>Your package structure (for example a requirements package holding both diagrams)</li><li>How you link low-level to high-level, and how you cite provisions (A or B above)</li></ul>'},
+ {h:'Read the principal needs out of the case study',b:'<p>Go through the case study paragraph by paragraph and mark every capability the system must have. Its own paragraph headings are a reasonable first grouping, but the grouping is your analysis. Write each group as one “shall”.</p><ul><li>Ask of each: could a different technology still meet it? If not, it is too low for this diagram.</li><li>Ask of the set: is any capability in the case study left without a requirement? That is the completeness criterion.</li></ul>'},
+ {h:'Draw the high-level diagram',b:'<ul><li>Frame and header with a diagram name that tells it apart from the low-level one</li><li>An optional composite requirement at the top, containment down to the principal requirements</li><li>Parents above children, no crossing lines, no blocks and no «satisfy»</li></ul>'},
+ {h:'Shortlist provisions from your 1.1 document',b:'<p>Your Risk Map lights the paragraphs you have already analysed. For each one, ask: in this scenario, what must the system do, show, prevent or allow so that this provision can be met? Note the related risk IDs as your reason. They feed rationale comments and your 1.1 prose, not the requirement text.</p>'},
+ {h:'Separate each requirement from its design response',b:'<p>Many measures in your Risk Map are design responses. For each one you want to use, write the need behind it as a solution-neutral “shall”, and keep the measure itself for the low-level BDD, where it will «satisfy» that requirement.</p><p>Test: if you replaced the measure with a different mechanism, would your requirement still stand unchanged? If yes, it is a requirement. If it changes, you have written the design.</p>'},
+ {h:'Narrow to 4–6',b:'<ul><li>At least one from Article 14 and at least one from Article 10</li><li>Each traces to at least one high-level requirement</li><li>Each has a mechanism you will actually show in the low-level BDD and, ideally, in the sequence diagram</li><li>At least two strong enough to become 2.5 mappings, each with a limitation you can discuss</li><li>If one connects naturally to your smart or adaptive element (2.4), note it. Don’t force it.</li></ul><div class="flag"><b>Article 10 interpretation check.</b> Article 10(1) ties its quality criteria to the training, validation and testing data sets of a system trained on data. A low-level requirement derived from Article 10 is on firmest ground when it concerns those data sets. If you derive one about live input data, your Risk Map already points to the deployer duty in Article 26(4). Say in 1.1 how you are bridging the two, and name the gap as a limitation in 2.5.</div>'},
+ {h:'Write the low-level text',b:'<ul><li>Pick the EARS pattern that fits the situation</li><li>Run each through the checker above</li><li>Keep technology out; keep it testable, using organisation-set values instead of clinical numbers</li></ul>'},
+ {h:'Draw the low-level diagram',b:'<ul><li>Drag in the high-level requirements you trace to; do not redraw them</li><li>Add your 4–6 requirements, then «deriveReqt» from each to its parent or parents, arrowheads on the high-level requirements</li><li>Cite each provision using your chosen convention, the same way every time</li></ul>'},
+ {h:'Sync the spreadsheet and self-check',b:'<p>Fill the columns below for every requirement, run the self-check, then expect to come back: drawing the BDD usually exposes a missing or badly worded requirement.</p>'},
+ {h:'Later: carry the IDs into Part 2',b:'<ul><li>2.2: «satisfy» from mechanism blocks to low-level requirements</li><li>2.3: show the mechanism as messages or fragments</li><li>2.5: one row per mapping, from Article provision to requirement ID to block to diagram evidence, plus its limitation</li></ul>'}
+];
+let built=store.get('sysmlguide-build',[]);
+function drawBuild(){
+  $('#buildSteps').innerHTML=BUILD.map((s,i)=>`<li class="${built.includes(i)?'done':''}"><input type="checkbox" id="b${i}" data-i="${i}" ${built.includes(i)?'checked':''} aria-label="Mark step ${i+1} done"><div><h3><label for="b${i}">${i+1}. ${esc(s.h)}</label></h3>${s.b}</div></li>`).join('');
+}
+$('#buildSteps').addEventListener('change',e=>{const c=e.target.closest('input');if(!c)return;const i=+c.dataset.i;built=c.checked?[...new Set([...built,i])]:built.filter(x=>x!==i);store.set('sysmlguide-build',built);drawBuild()});
+
+/* ---------- 8. spreadsheet ---------- */
+const SHEET=[
+ ['ID','Your scheme, unique and stable','The requirement’s id property'],
+ ['Name','Short noun phrase','The element name, bold in the box'],
+ ['Text','One “shall” statement','The text property'],
+ ['Level','High or low','Which diagram and package it sits in'],
+ ['Parent','ID of the containing requirement','A containment line, crosshair at the parent'],
+ ['Derived from','High-level ID or IDs','«deriveReqt» arrows; the derivedFrom callout'],
+ ['Source provision','The Article paragraph cited','A «rationale» comment, or a source element (option B)'],
+ ['Rationale','Why: risk IDs from your Risk Map, the case-study paragraph','The «rationale» text, and your 1.1 prose'],
+ ['EARS pattern','Ubiquitous, event, state, unwanted or optional','Nothing in the model; a writing aid'],
+ ['Satisfied by','Block or blocks, filled in during Part 2.2','«satisfy» arrows; the satisfiedBy callout'],
+ ['Behaviour evidence','Sequence message or fragment, from Part 2.3','The sequence diagram, and your 2.5 table'],
+ ['Verification method','Inspection, analysis, demonstration or test','Optional; some tools offer a verifyMethod property'],
+ ['Status','Draft, reviewed, changed','Nothing in the model; tracks your iterations']
+];
+$('#sheetBody').innerHTML=SHEET.map(r=>`<tr><th data-l="Column">${r[0]}</th><td data-l="Contents">${esc(r[1])}</td><td data-l="In SysML">${esc(r[2])}</td></tr>`).join('');
+
+/* ---------- 9. self-check ---------- */
+const CHECK=[
+ ['Completeness as regards the scenario',['Walking the case study paragraph by paragraph, I can point to the high-level requirement covering each capability it names','The low-level diagram has 4–6 requirements','At least one low-level requirement comes from Article 14 and at least one from Article 10']],
+ ['Appropriate decomposition',['Containment children together say what their parent says, no more and no less','Every requirement has exactly one “shall”','Every low-level requirement traces to at least one high-level requirement']],
+ ['Appropriate level of abstraction',['High-level requirements read as what the system must achieve','Each low-level requirement is narrower and more testable than its parent','Siblings sit at a similar level of detail']],
+ ['Separation of problem and implementation',['No requirement text names a technology, product, algorithm or screen widget','No blocks or «satisfy» on the high-level diagram','Risk Map measures appear as design responses, not as requirements']],
+ ['Correct SysML notation',['Both diagrams have a frame with a req header and distinct diagram names','Every requirement shows «requirement», a name, an id and text','Containment crosshairs sit at the parent end','«deriveReqt» arrowheads sit on the high-level requirements','Keywords are exactly «deriveReqt», «satisfy», «refine»: not «derive» or “derives”','The provision-citing convention is the same on every link and stated once','High-level elements are reused on the low-level diagram, not duplicated','Both diagrams are exported from the lab tool and kept as editable files']]
+];
+let ticks=store.get('sysmlguide-check',[]);
+const totalChecks=CHECK.reduce((a,g)=>a+g[1].length,0);
+function drawCheck(){
+  $('#checkGrid').innerHTML=CHECK.map((g,gi)=>`<div class="cgroup"><h3>${esc(g[0])}</h3>${g[1].map((c,ci)=>{const k=gi+'-'+ci;return `<label><input type="checkbox" data-k="${k}" ${ticks.includes(k)?'checked':''}><span>${esc(c)}</span></label>`}).join('')}</div>`).join('');
+  $('#checkScore').textContent=`${ticks.length} of ${totalChecks} checks ticked`;
+}
+$('#checkGrid').addEventListener('change',e=>{const c=e.target.closest('input');if(!c)return;const k=c.dataset.k;ticks=c.checked?[...new Set([...ticks,k])]:ticks.filter(x=>x!==k);store.set('sysmlguide-check',ticks);$('#checkScore').textContent=`${ticks.length} of ${totalChecks} checks ticked`});
+$('#checkReset').addEventListener('click',()=>{ticks=[];store.set('sysmlguide-check',ticks);drawCheck()});
+
+/* ---------- 10. quiz ---------- */
+const QUIZ=[
+ {q:'The block Zone Water Valve Controller fulfils LLR-W1. Where does the «satisfy» arrowhead go?',o:['On LLR-W1','On the block','Either end works','Satisfy has no arrowhead'],a:0,e:'Satisfy is a dependency from the design element (tail) to the requirement it fulfils (head).'},
+ {q:'LLR-M2 was worked out by analysing a misting clause against HLR-05. Which relationship, drawn which way?',o:['«deriveReqt» from LLR-M2 to HLR-05','«deriveReqt» from HLR-05 to LLR-M2','Containment with the crosshair on LLR-M2','«satisfy» from LLR-M2 to HLR-05'],a:0,e:'The arrow starts at the derived requirement and its head sits on the requirement it came from.'},
+ {q:'HLR-00 is split into five children that together say exactly what it says. Where is the crosshair?',o:['On HLR-00, the parent','On each child','In the middle of the line','Containment uses an arrowhead instead'],a:0,e:'The crosshair marks the container. The children carry no symbol.'},
+ {q:'A use case, Irrigate Zone, sets out the scenarios behind HLR-02 in more detail. Which relationship fits?',o:['«refine» from the use case to HLR-02','«deriveReqt» from the use case to HLR-02','«satisfy» from HLR-02 to the use case','Containment'],a:0,e:'deriveReqt only links two requirements. A model that clarifies a requirement refines it.'},
+ {q:'Which is the SysML 1.x keyword on a requirement-derivation arrow?',o:['«deriveReqt»','«derive»','«derives»','«derivedFrom»'],a:0,e:'derivedFrom is the callout name shown on the derived requirement. «derive» is a different UML keyword.'},
+ {q:'Which of these belongs on a high-level requirements diagram?',o:['“The GCC shall adjust the climate of any zone that is outside its set ranges.”','“The GCC shall close a solenoid valve over MQTT when flow passes 40 litres.”','A «block» Valve Controller with a «satisfy» arrow','“The GCC shall manage water sensibly.”'],a:0,e:'The second names a design, the third is design structure, and the fourth cannot be tested.'},
+ {q:'Which statement is singular and verifiable?',o:['“When misting ends in a zone, the GCC shall record the zone, the duration and the product used.”','“The GCC shall record misting and alert the grower and close valves.”','“The GCC should be easy to use.”','“Misting shall be recorded where appropriate.”'],a:0,e:'One trigger and one response. The others join three capabilities, use a vague goal, or hide the actor behind passive voice and “where appropriate”.'},
+ {q:'You want to show which clause drove a derivation without adding requirement boxes. Which fits?',o:['A «rationale» comment anchored to the «deriveReqt»','A «copy» from the clause','A «satisfy» from the clause to the requirement','Containment under the clause'],a:0,e:'SysML lets a rationale attach to any element, relationships included. Modelling the clause as its own source element is the other defensible option.'}
+];
+const quizOrder=QUIZ.map(q=>q.o.map((_,i)=>i).sort((a,b)=>((a*7+q.q.length)%5)-((b*7+q.q.length)%5)));
+let qAns={};
+function drawQuiz(){
+  $('#quizBox').innerHTML=QUIZ.map((q,qi)=>{const chosen=qAns[qi];return `<div class="qq"><p class="qt">${qi+1}. ${esc(q.q)}</p><div class="opts">${quizOrder[qi].map(oi=>{let c='';if(chosen!=null){if(oi===q.a)c='right';else if(oi===chosen)c='wrong'}return `<button type="button" class="${c}" data-q="${qi}" data-o="${oi}" ${chosen!=null?'disabled':''}>${esc(q.o[oi])}</button>`}).join('')}</div>${chosen!=null?`<p class="fb"><b>${chosen===q.a?'Right.':'Not quite.'}</b> ${esc(q.e)}</p>`:''}</div>`}).join('');
+  const n=Object.keys(qAns).length,ok=Object.entries(qAns).filter(([k,v])=>QUIZ[k].a===v).length;
+  $('#quizScore').textContent=n?`${ok} of ${n} answered correctly${n===QUIZ.length?'. Done.':''}`:'';
+}
+$('#quizBox').addEventListener('click',e=>{const b=e.target.closest('button[data-q]');if(!b||b.disabled)return;qAns[+b.dataset.q]=+b.dataset.o;drawQuiz()});
+
+/* ---------- 11. lab questions ---------- */
+const LAB=['Should «satisfy» links appear on the low-level requirements diagram, or only on the low-level BDD?','Do you want EU AI Act provisions modelled as source elements (option B), or cited in «rationale» comments (option A)?','Is «deriveReqt» the link you expect from low-level to high-level requirements, or do your lab examples use containment or «refine»?','Do you expect one composite requirement at the top of the high-level diagram?','Is there a preferred ID convention?','Is a low-level requirement about live input data acceptable under Article 10 if the link through Article 26(4) is justified?'];
+$('#labList').innerHTML=LAB.map((q,i)=>`<li style="grid-template-columns:30px minmax(0,1fr)"><b>${i+1}</b><span>${esc(q)}</span></li>`).join('');
+
+/* ---------- render ---------- */
+function renderAll(){HL=buildHL();LL=buildLL();drawAnat();drawRel();drawEx()}
+drawChain();drawWiz();drawBuild();drawCheck();drawQuiz();renderAll();
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(renderAll);
+}
+</script>
+</body>
+</html>
